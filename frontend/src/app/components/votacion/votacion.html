@@ -1,0 +1,180 @@
+<div class="voting-container">
+
+  <div class="toast-container">
+    <div *ngIf="mensaje && !mensaje.includes('Ya has votado')" class="mac-toast animate-toast">
+      <div class="mac-icon-box">
+        <span class="mac-app-icon">✨</span>
+      </div>
+      <div class="mac-text-content">
+        <div class="mac-header-row">
+          <strong class="mac-title">Voto Universitario</strong>
+          <span class="mac-time">Ahora</span>
+        </div>
+        <p class="mac-body">{{ mensaje }}</p>
+      </div>
+      <button *ngIf="!cargando" (click)="cerrarMensaje()" class="mac-close-btn">&times;</button>
+    </div>
+
+    <div *ngIf="mostrarBannerAutorizacion" class="mac-toast animate-toast">
+      <div class="mac-icon-box">
+        <span class="mac-app-icon">{{ estoyAutorizado ? '✅' : '⚠️' }}</span>
+      </div>
+      <div class="mac-text-content">
+        <div class="mac-header-row">
+          <strong class="mac-title">Padrón Electoral</strong>
+          <span class="mac-time">Ahora</span>
+        </div>
+        <p class="mac-body" *ngIf="estoyAutorizado">Tu billetera se encuentra debidamente dada de alta en la lista nominal.</p>
+        <p class="mac-body" *ngIf="!estoyAutorizado">Esta cuenta no está registrada. Solicita acceso al administrador.</p>
+      </div>
+      <button (click)="mostrarBannerAutorizacion = false" class="mac-close-btn">&times;</button>
+    </div>
+  </div>
+
+  <div class="landing-hero animate-fade-in" *ngIf="!cuenta">
+    <div class="hero-logo">🏛️</div>
+    <h1>Voto Universitario</h1>
+    <p class="hero-subtitle">Sistema de Votación Democrático, Transparente y Seguro basado en Blockchain</p>
+    <p class="hero-description">
+      Para participar en los procesos electorales vigentes, consultar las planillas registradas o gestionar el padrón institucional, es necesario autenticar tu identidad digital.
+    </p>
+    <button (click)="conectar()" class="btn-hero-connect">
+      Conectar Billetera MetaMask
+    </button>
+  </div>
+
+  <ng-container *ngIf="cuenta">
+    <header class="app-header">
+      <div>
+        <h1>Voto Universitario</h1>
+        <p class="subtitle">Infraestructura Blockchain Descentralizada</p>
+      </div>
+      
+      <div class="wallet-section">
+        <div class="wallet-badge-container">
+          <div class="wallet-badge">
+            <span class="status-indicator connected"></span>
+            <span class="wallet-address">{{ cuenta.substring(0,6) }}...{{ cuenta.substring(cuenta.length-4) }}</span>
+          </div>
+          <button (click)="desconectarWallet()" class="btn-disconnect-wallet" title="Desconectar y regresar al inicio">
+            🚪 Salir
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <section class="status-grid">
+      <div class="status-card">
+        <span class="card-label">Fase del Proceso</span>
+        <span class="card-value" [ngClass]="eleccionAbierta ? 'text-open' : 'text-closed'">
+          {{ eleccionAbierta ? 'Elecciones Activas' : 'Proceso Cerrado / Receso' }}
+        </span>
+      </div>
+      <div class="status-card">
+        <span class="card-label">Padrón Electoral</span>
+        <span class="card-value">{{ totalVotantesAutorizados }} Votantes</span>
+      </div>
+      <div class="status-card">
+        <span class="card-label">Planillas Registradas</span>
+        <span class="card-value">{{ candidatos.length }} Candidatos</span>
+      </div>
+    </section>
+
+    <ng-container *ngIf="esAdmin">
+      <section class="admin-panel animate-fade-in">
+        <div class="panel-header-bar">
+          <h3>🔧 Panel de Control Operativo (Modo Administrador)</h3>
+          <span class="admin-tag">Owner Privileges</span>
+        </div>
+        
+        <div class="admin-grid">
+          <div class="admin-card">
+            <h4>Registrar Candidato o Planilla</h4>
+            <p class="card-instruction">Añade una nueva opción a la boleta. El registro consume gas en la red.</p>
+            <div class="input-group">
+              <input type="text" [(ngModel)]="nombreCandidato" placeholder="Ej. Planilla Oro" [disabled]="cargando">
+              <button (click)="registrar()" [disabled]="cargando" class="btn-action">Registrar</button>
+            </div>
+          </div>
+
+          <div class="admin-card">
+            <h4>Autorizar Votante (Padrón Electoral)</h4>
+            <p class="card-instruction">Pega la dirección de MetaMask (0x...) del alumno para permitirle votar.</p>
+            <div class="input-group">
+              <input type="text" [(ngModel)]="direccionVotante" placeholder="0x0000..." [disabled]="cargando">
+              <button (click)="registrarVotante()" [disabled]="cargando" class="btn-action">Autorizar</button>
+            </div>
+          </div>
+
+          <div class="admin-card control-phases-card">
+            <h4>Control de Fases</h4>
+            <p class="card-instruction">Abre la boleta para permitir el sufragio o ciérrala para iniciar el conteo final.</p>
+            <div class="actions-row">
+              <button (click)="abrir()" [disabled]="eleccionAbierta || cargando" class="btn-phase btn-start">
+                ▶ Abrir Elección
+              </button>
+              <button (click)="cerrar()" [disabled]="!eleccionAbierta || cargando" class="btn-phase btn-stop">
+                🛑 Finalizar Elección
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </ng-container>
+
+    <section class="ballot-section">
+      <h2>Boleta Electoral Disponible</h2>
+      <p class="section-desc" *ngIf="eleccionAbierta">Selecciona la opción de tu preferencia de manera libre y secreta. Cada cuenta puede votar una sola vez.</p>
+      <p class="section-desc" *ngIf="!eleccionAbierta">Las urnas electrónicas están cerradas. Abajo se muestran los resultados acumulados históricos asentados en el bloque.</p>
+
+      <div *ngIf="mensaje && mensaje.includes('Ya has votado')" class="critical-vote-alert animate-fade-in">
+        <div class="critical-alert-content">
+          <span class="critical-icon">🚫</span>
+          <div>
+            <h4>Acceso Restringido a la Urna</h4>
+            <p>{{ mensaje }}</p>
+          </div>
+        </div>
+        <button (click)="cerrarMensaje()" class="btn-close-critical">&times;</button>
+      </div>
+
+      <div *ngIf="candidatos.length === 0" class="no-candidates">
+        <p>No hay candidatos ni planillas dadas de alta en este proceso electoral todavía.</p>
+      </div>
+
+      <div class="candidates-grid" *ngIf="candidatos.length > 0">
+        <div *ngFor="let c of candidatos" class="candidate-card">
+          <div class="candidate-header">
+            <div class="candidate-icon-circle">🏛️</div>
+            <h4 class="candidate-name">{{ c.nombre }}</h4>
+          </div>
+          
+          <div class="candidate-body">
+            <div class="results-display">
+              <span class="votes-num">{{ c.votos }}</span>
+              <span class="votes-text">Votos Registrados</span>
+            </div>
+          </div>
+
+          <div class="candidate-footer">
+            <button 
+              (click)="votar(c.id)" 
+              [disabled]="!eleccionAbierta || cargando" 
+              class="btn-vote"
+              [ngClass]="{'btn-vote-active': eleccionAbierta}">
+              {{ eleccionAbierta ? 'Emitir Voto' : 'Urna Cerrada' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </ng-container>
+
+  <div class="spinner-overlay" *ngIf="cargando">
+    <div class="spinner-card">
+      <div class="loading-spinner"></div>
+      <p class="spinner-main-text">Transacción en Proceso</p>
+      <p class="spinner-sub-text">{{ mensaje }}</p>
+    </div>
+  </div>
+</div>
